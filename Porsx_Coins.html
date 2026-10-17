@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The PCS</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      background-color: #1a1a2e;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .game-card {
+      background: #16213e;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+      width: 350px;
+      text-align: center;
+      border: 2px solid #0f3460;
+    }
+    h1 {
+      margin-top: 0;
+      color: #e94560;
+    }
+    .status-bar {
+      background: #0f3460;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-weight: bold;
+      font-size: 1.1em;
+    }
+    .coin-val {
+      color: #f1c40f;
+    }
+    .input-section {
+      margin: 15px 0;
+    }
+    input[type="number"], input[type="text"] {
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+      outline: none;
+      text-align: center;
+      font-size: 1em;
+    }
+    .bet-input {
+      width: 100px;
+      margin-right: 5px;
+    }
+    .btn-on {
+      padding: 10px 20px;
+      background-color: #2ec4b6;
+      border: none;
+      border-radius: 5px;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn-on:hover {
+      background-color: #20968b;
+    }
+    .btn-on:disabled {
+      background-color: #555;
+      cursor: not-allowed;
+    }
+    .game-area {
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 1px solid #0f3460;
+    }
+    .jopoto-box {
+      font-style: italic;
+      color: #a2d2ff;
+      margin-bottom: 15px;
+    }
+    .letter-box-display {
+      font-size: 3em;
+      font-weight: bold;
+      color: #e94560;
+      margin: 15px 0;
+      background: #0f3460;
+      display: inline-block;
+      width: 70px;
+      height: 70px;
+      line-height: 70px;
+      border-radius: 10px;
+      border: 2px dashed #e94560;
+    }
+    .guess-box {
+      margin-top: 10px;
+    }
+    .letter-input {
+      width: 60px;
+      font-size: 1.3em;
+      text-transform: uppercase;
+    }
+    .btn-guess {
+      padding: 10px 15px;
+      background-color: #e94560;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .message {
+      margin-top: 15px;
+      font-weight: bold;
+      min-height: 24px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="game-card">
+    <h1>Tebak Huruf Jopoto</h1>
+    
+    <div class="status-bar">
+      Coins Kamu: <span class="coin-val" id="myCoins">50</span> 🪙
+    </div>
+
+    <!-- Area Pasang Taruhan & Tombol ON -->
+    <div class="input-section">
+      <label for="betCoins">Pasang Coin: </label>
+      <input type="number" id="betCoins" class="bet-input" value="10" min="1">
+      <button id="btnOn" class="btn-on" onclick="startGame()">ON</button>
+    </div>
+
+    <!-- Area Permainan -->
+    <div class="game-area" id="gameArea" style="display: none;">
+      <div class="jopoto-box" id="jopotoTalk">
+        Jopoto: "Aku sudah milih 1 huruf rahasia (A-Z)!"
+      </div>
+
+      <div>Sisa Kesempatan: <span id="lives" style="color: #ff4d4d; font-weight: bold;">2</span> ❤️</div>
+
+      <div class="letter-box-display" id="letterDisplay">?</div>
+
+      <div class="guess-box">
+        <input type="text" id="letterInput" class="letter-input" maxlength="1" placeholder="A">
+        <button class="btn-guess" onclick="makeGuess()">Tebak</button>
+      </div>
+    </div>
+
+    <div class="message" id="message"></div>
+  </div>
+
+  <script>
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    
+    let totalCoins = 50;
+    let currentBet = 0;
+    let targetLetter = "";
+    let remainingLives = 2;
+    let gameActive = false;
+
+    const myCoinsEl = document.getElementById("myCoins");
+    const betInput = document.getElementById("betCoins");
+    const btnOn = document.getElementById("btnOn");
+    const gameArea = document.getElementById("gameArea");
+    const letterDisplay = document.getElementById("letterDisplay");
+    const livesEl = document.getElementById("lives");
+    const messageEl = document.getElementById("message");
+    const jopotoTalk = document.getElementById("jopotoTalk");
+    const letterInput = document.getElementById("letterInput");
+
+    function startGame() {
+      currentBet = parseInt(betInput.value);
+
+      if (isNaN(currentBet) || currentBet <= 0) {
+        alert("Masukkan jumlah coin taruhan yang valid!");
+        return;
+      }
+
+      if (currentBet > totalCoins) {
+        alert("Coin kamu gak cukup!");
+        return;
+      }
+
+      // Kurangi coin sesuai taruhan
+      totalCoins -= currentBet;
+      myCoinsEl.textContent = totalCoins;
+
+      // Jopoto milih 1 huruf acak dari A-Z
+      targetLetter = alphabet[Math.floor(Math.random() * alphabet.length)];
+      remainingLives = 2;
+      gameActive = true;
+
+      // Reset tampilan
+      btnOn.disabled = true;
+      betInput.disabled = true;
+      gameArea.style.display = "block";
+      letterDisplay.textContent = "?";
+      livesEl.textContent = remainingLives;
+      messageEl.textContent = "";
+      jopotoTalk.textContent = 'Jopoto: "Aku sudah milih 1 huruf rahasia (A-Z)!"';
+    }
+
+    function makeGuess() {
+      if (!gameActive) return;
+
+      const guess = letterInput.value.toUpperCase();
+      letterInput.value = "";
+
+      if (!guess || !/[A-Z]/.test(guess)) {
+        messageEl.textContent = "Masukkan 1 huruf valid (A-Z)!";
+        messageEl.style.color = "#ff4d4d";
+        return;
+      }
+
+      if (guess === targetLetter) {
+        // Jika tebakan benar
+        letterDisplay.textContent = targetLetter;
+        winGame();
+      } else {
+        // Jika tebakan salah
+        remainingLives--;
+        livesEl.textContent = remainingLives;
+
+        if (remainingLives > 0) {
+          messageEl.textContent = `Salah! Masih ada 1 kesempatan lagi.`;
+          messageEl.style.color = "#ff4d4d";
+        } else {
+          letterDisplay.textContent = targetLetter;
+          loseGame();
+        }
+      }
+    }
+
+    function winGame() {
+      gameActive = false;
+      const reward = currentBet * 2;
+      totalCoins += reward;
+      myCoinsEl.textContent = totalCoins;
+
+      jopotoTalk.textContent = 'Jopoto: "Hebat! Tebakanmu tepat sekali!"';
+      messageEl.textContent = `BENAR! Kamu dapet ${reward} Coins (2x Lipat)!`;
+      messageEl.style.color = "#f1c40f";
+
+      resetUI();
+    }
+
+    function loseGame() {
+      gameActive = false;
+      jopotoTalk.textContent = `Jopoto: "Salah! Huruf rahasiaku adalah: ${targetLetter}"`;
+      messageEl.textContent = "Kesempatan habis! Kamu gagal dapat coin.";
+      messageEl.style.color = "#ff4d4d";
+
+      resetUI();
+    }
+
+    function resetUI() {
+      btnOn.disabled = false;
+      betInput.disabled = false;
+    }
+
+    letterInput.addEventListener("keyup", function(event) {
+      if (event.key === "Enter") {
+        makeGuess();
+      }
+    });
+  </script>
+</body>
+</html>
